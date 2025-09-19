@@ -2,6 +2,9 @@ import gym
 from gym.utils import seeding
 from gym.spaces.discrete import Discrete
 from gym.spaces import Box
+
+import pygame
+
 from .room_utils import generate_room
 from .render_utils import room_to_rgb, room_to_tiny_world_rgb
 import numpy as np
@@ -9,8 +12,7 @@ import numpy as np
 
 class SokobanEnv(gym.Env):
     metadata = {
-        'render.modes': ['human', 'rgb_array', 'tiny_human', 'tiny_rgb_array', 'raw'],
-        'render_modes': ['human', 'rgb_array', 'tiny_human', 'tiny_rgb_array', 'raw']
+        'render.modes': ['human', 'rgb_array', 'tiny_human', 'tiny_rgb_array']
     }
 
     def __init__(self,
@@ -19,6 +21,12 @@ class SokobanEnv(gym.Env):
                  num_boxes=4,
                  num_gen_steps=None,
                  reset=True):
+        
+        # wmx add this
+        self.viewer = None
+        self.screen_size = None
+        self.window = None
+        self.clock = None
 
         # General Configuration
         self.dim_room = dim_room
@@ -54,7 +62,7 @@ class SokobanEnv(gym.Env):
 
     def step(self, action, observation_mode='rgb_array'):
         assert action in ACTION_LOOKUP
-        assert observation_mode in ['rgb_array', 'tiny_rgb_array', 'raw']
+        assert observation_mode in ['rgb_array', 'tiny_rgb_array']
 
         self.num_env_steps += 1
 
@@ -210,7 +218,7 @@ class SokobanEnv(gym.Env):
         except (RuntimeError, RuntimeWarning) as e:
             print("[SOKOBAN] Runtime Error/Warning: {}".format(e))
             print("[SOKOBAN] Retry . . .")
-            return self.reset(second_player=second_player, render_mode=render_mode)
+            return self.reset(second_player=second_player)
 
         self.player_position = np.argwhere(self.room_state == 5)[0]
         self.num_env_steps = 0
@@ -220,8 +228,29 @@ class SokobanEnv(gym.Env):
         starting_observation = self.render(render_mode)
         return starting_observation
 
-    def render(self, mode='human', close=None, scale=1):
-        assert mode in RENDERING_MODES
+    # def render(self, mode='human', close=None, scale=1):
+    #     assert mode in RENDERING_MODES
+
+    #     img = self.get_image(mode, scale)
+
+    #     if 'rgb_array' in mode:
+    #         return img
+
+    #     elif 'human' in mode:
+
+    #         from gym.envs.classic_control import rendering
+    #         if self.viewer is None:
+    #             self.viewer = rendering.SimpleImageViewer()
+    #         self.viewer.imshow(img)
+    
+    #         return self.viewer.isopen
+
+    #     else:
+    #         super(SokobanEnv, self).render(mode=mode)  # just raise an exception
+
+
+    def render(self, mode='human', close=None, scale=4):
+        assert mode in ['human', 'rgb_array', 'tiny_rgb_array', 'tiny_human']
 
         img = self.get_image(mode, scale)
 
@@ -229,22 +258,26 @@ class SokobanEnv(gym.Env):
             return img
 
         elif 'human' in mode:
-            from gym.envs.classic_control import rendering
-            if self.viewer is None:
-                self.viewer = rendering.SimpleImageViewer()
-            self.viewer.imshow(img)
-            return self.viewer.isopen
+            if self.window is None:
+                pygame.init()
+                self.screen_size = img.shape[1]*scale, img.shape[0]*scale
+                self.window = pygame.display.set_mode(self.screen_size)
+                self.clock = pygame.time.Clock()
 
-        elif 'raw' in mode:
-            arr_walls = (self.room_fixed == 0).view(np.int8)
-            arr_goals = (self.room_fixed == 2).view(np.int8)
-            arr_boxes = ((self.room_state == 4) + (self.room_state == 3)).view(np.int8)
-            arr_player = (self.room_state == 5).view(np.int8)
+            rgb_array = np.transpose(img, axes=(1, 0, 2))
+            surf = pygame.surfarray.make_surface(rgb_array)
 
-            return arr_walls, arr_goals, arr_boxes, arr_player
+            surf = pygame.transform.scale(surf, self.screen_size)
+            
+            self.window.blit(surf, (0, 0))
+            pygame.display.flip()
+            self.clock.tick(self.metadata.get('render_fps', 30))
+
+            return self.window is not None
 
         else:
             super(SokobanEnv, self).render(mode=mode)  # just raise an exception
+
 
     def get_image(self, mode, scale=1):
         
@@ -255,9 +288,15 @@ class SokobanEnv(gym.Env):
 
         return img
 
+    # def close(self):
+    #     if self.viewer is not None:
+    #         self.viewer.close()
+
     def close(self):
-        if self.viewer is not None:
-            self.viewer.close()
+        if self.window is not None:
+            pygame.display.quit()
+            pygame.quit()
+            self.window = None
 
     def set_maxsteps(self, num_steps):
         self.max_steps = num_steps
@@ -293,4 +332,4 @@ CHANGE_COORDINATES = {
     3: (0, 1)
 }
 
-RENDERING_MODES = ['rgb_array', 'human', 'tiny_rgb_array', 'tiny_human', 'raw']
+RENDERING_MODES = ['rgb_array', 'human', 'tiny_rgb_array', 'tiny_human']

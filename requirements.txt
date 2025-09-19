@@ -1,0 +1,17 @@
+certifi==2022.12.7
+charset-normalizer==3.3.2
+cloudpickle==2.2.1
+gym==0.26.2
+gym-notices==0.0.8
+gym-sokoban==0.0.6
+idna==3.7
+imageio==2.31.2
+importlib-metadata==6.7.0
+numpy==1.21.6
+Pillow==9.5.0
+pygame==2.6.0
+requests==2.31.0
+tqdm==4.66.5
+typing_extensions==4.7.1
+urllib3==2.0.7
+zipp==3.15.0

@@ -6,7 +6,7 @@ import time
 # import gym_sokoban
 # This import statement registers all Sokoban environments
 # provided by this package
-env_name = 'Sokoban-v0'
+env_name = 'Sokoban-v2'
 env = gym.make(env_name)
 
 ACTION_LOOKUP = env.unwrapped.get_action_lookup()
@@ -20,13 +20,13 @@ for i_episode in range(1):#20
         action = env.action_space.sample()
 
         # Sleep makes the actions visible for users
-        time.sleep(1)
+        # time.sleep(1)
         observation, reward, done, info = env.step(action)
 
         print(ACTION_LOOKUP[action], reward, done, info)
         if done:
             print("Episode finished after {} timesteps".format(t+1))
-            env.render()
+            env.render(mode='human')
             break
 
     env.close()
